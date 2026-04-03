@@ -9,7 +9,7 @@
 #include<netdb.h>
 #include<string.h>
 #include<commons/log.h>
-
+#include <errno.h>
 typedef enum
 {
 	MENSAJE,

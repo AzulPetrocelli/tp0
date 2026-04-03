@@ -45,7 +45,7 @@ int main(void)
 
 	/* ---------------- LEER DE CONSOLA ---------------- */
 
-	leer_consola(logger);
+	// leer_consola(logger);
 
 	/*---------------------------------------------------PARTE 3-------------------------------------------------------------*/
 
@@ -55,6 +55,11 @@ int main(void)
 	conexion = crear_conexion(ip, puerto);
 
 	// Enviamos al servidor el valor de CLAVE como mensaje
+	char *mensaje = malloc(strlen("CLAVE: ") + strlen(valor) + 1);
+	sprintf(mensaje, "CLAVE: %s", valor);
+	enviar_mensaje(mensaje, conexion);
+
+	free(mensaje);
 
 	// Armamos y enviamos el paquete
 	paquete(conexion);
@@ -99,7 +104,6 @@ void leer_consola(t_log* logger)
 
 	// ¡No te olvides de liberar las lineas antes de regresar!
 	free(leido);
-
 }
 
 void paquete(int conexion)
@@ -109,14 +113,34 @@ void paquete(int conexion)
 	t_paquete* paquete;
 
 	// Leemos y esta vez agregamos las lineas al paquete
+	int offset = 0;
+	int err = recv(conexion, &paquete, sizeof(t_paquete), MSG_WAITALL);
+	
+	memcpy(paquete + offset, &paquete->codigo_operacion, sizeof(int));
+	offset += sizeof(int);
+	memcpy(paquete + offset, &paquete->buffer->size, sizeof(int));
+	offset += sizeof(int);
+	memcpy(paquete + offset, paquete->buffer->stream, paquete->buffer->size);
+
+	if(err == -1) {
+		t_log *logger = log_create("tp0.log", "CLIENT", true, LOG_LEVEL_ERROR);
+		log_error(logger, "Error al recibir el paquete");
+		exit(1);
+	}
+
+	paquete = crear_paquete();
 
 
 	// ¡No te olvides de liberar las líneas y el paquete antes de regresar!
-	
+	free(leido);
+	eliminar_paquete(paquete);
 }
 
 void terminar_programa(int conexion, t_log* logger, t_config* config)
 {
 	/* Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
 	  con las funciones de las commons y del TP mencionadas en el enunciado */
+	liberar_conexion(conexion);
+    log_destroy(logger);
+    config_destroy(config);
 }

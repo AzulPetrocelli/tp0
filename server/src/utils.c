@@ -5,9 +5,10 @@ t_log* logger;
 int iniciar_servidor(void)
 {
 	// Quitar esta línea cuando hayamos terminado de implementar la funcion
-	assert(!"no implementado!");
+	// assert(!"no implementado!");
 
 	int socket_servidor;
+	t_log *logger_error = log_create("tp0.log", "SERVER", true, LOG_LEVEL_ERROR);
 
 	struct addrinfo hints, *servinfo, *p;
 
@@ -16,16 +17,44 @@ int iniciar_servidor(void)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(NULL, PUERTO, &hints, &servinfo);
+
+	int err = getaddrinfo(NULL, PUERTO, &hints, &servinfo);
+
+	if (err != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
+		exit(1);
+	}
 
 	// Creamos el socket de escucha del servidor
+	socket_servidor = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+
+	if(socket_servidor == -1) {
+		log_error(logger_error, "Hubo un error al crear el socket servidor");
+		exit(1);
+	}
 
 	// Asociamos el socket a un puerto
+	// Para evitar el error "Address already in use" al reiniciar el servidor
+	int opt = 1;
+	setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+	// Bindiamos el socket al puerto
+	err = bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
+
+	if(err == -1) {
+		log_error(logger_error, "Hubo un error al bindear el socket servidor");
+		exit(1);
+	}
 
 	// Escuchamos las conexiones entrantes
+	err = listen(socket_servidor, SOMAXCONN);
+
+	if(err == -1) {
+		log_error(logger_error, "Hubo un error al escuchar el socket servidor");
+		exit(1);
+	}
 
 	freeaddrinfo(servinfo);
-	log_trace(logger, "Listo para escuchar a mi cliente");
+	log_destroy(logger_error);
 
 	return socket_servidor;
 }
@@ -33,11 +62,16 @@ int iniciar_servidor(void)
 int esperar_cliente(int socket_servidor)
 {
 	// Quitar esta línea cuando hayamos terminado de implementar la funcion
-	assert(!"no implementado!");
+	// assert(!"no implementado!");
 
 	// Aceptamos un nuevo cliente
-	int socket_cliente;
-	log_info(logger, "Se conecto un cliente!");
+	int socket_cliente = accept(socket_servidor, NULL, NULL);
+
+	if(socket_cliente == -1) {
+		exit(1);
+	} else {
+		log_info(logger, "Se conecto un cliente!");
+	}
 
 	return socket_cliente;
 }

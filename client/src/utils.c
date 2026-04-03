@@ -24,16 +24,34 @@ int crear_conexion(char *ip, char* puerto)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(ip, puerto, &hints, &server_info);
+	t_log *logger_error = log_create("tp0.log", "CLIENT", true, LOG_LEVEL_ERROR);
+
+	int err = getaddrinfo(ip, puerto, &hints, &server_info);
+
+	if (err != 0) {
+		log_error(logger_error, "No se pudo resolver la dirección ip: %s del puerto %s servidor", ip, puerto);
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
+		exit(1);
+	}
 
 	// Ahora vamos a crear el socket.
-	int socket_cliente = 0;
+	int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
+	
+	if (socket_cliente == -1) {
+		log_error(logger_error, "Hubo un error al crear el socket cliente");
+		exit(1);
+	}
 
 	// Ahora que tenemos el socket, vamos a conectarlo
+	int fd_conexion = connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
 
+	if (fd_conexion == -1) {
+		log_error(logger_error, "fd_conexion error: %s", strerror(errno));
+		exit(1);
+	}
 
+	log_destroy(logger_error);
 	freeaddrinfo(server_info);
 
 	return socket_cliente;
